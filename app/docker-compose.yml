@@ -1,0 +1,57 @@
+version: '3'
+
+services:
+
+  db:
+    image: mysql
+    container_name: "db"
+    environment:
+      MYSQL_ROOT_PASSWORD: my_secret_password
+      MYSQL_DATABASE: app_db
+      MYSQL_USER: db_user
+      MYSQL_PASSWORD: db_user_pass
+    ports:
+      - 3306:3306
+    volumes:
+      - dbdata:/var/lib/mysql
+
+  php:
+    container_name: "www_app"
+    build:
+      context: ../docker/php
+    depends_on:
+      - db
+    volumes:
+      - ./php/vhosts:/etc/apache2/sites-enabled
+      - ../app:/var/www/html
+
+  phpmyadmin:
+    image: phpmyadmin
+    container_name: "pma"
+    depends_on:
+      - db
+    environment:
+      PMA_HOST: db
+      PMA_PORT: 3306
+      PMA_ARBITRARY: 1
+    restart: always
+    ports:
+      - 8081:80
+
+  apache:
+    container_name: "apache"
+    build:
+      context: ../docker/apache
+    ports:
+      - 8000:80
+    depends_on:
+      - db
+      - php
+    environment:
+      - APACHE_RUN_USER=#1000
+      - APACHE_RUN_GROUP=#1000
+    volumes:
+      - ../app:/var/www/html
+
+volumes:
+  dbdata:
